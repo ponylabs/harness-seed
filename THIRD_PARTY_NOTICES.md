@@ -1,0 +1,13 @@
+# 第三方来源与许可
+
+本仓库的部分 Skill、参考材料和示例由 DeepSeek Harness 内容翻译、改写并去项目专属化而来，不是全部独立原创，也不是 DeepSeek 官方模板。
+
+- 上游：[deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)。
+- 固定版本：[8bd073392eef6f54e921a093b95076248eb08cbb](https://github.com/deepseek-ai/deepseek-harness/tree/8bd073392eef6f54e921a093b95076248eb08cbb)。
+- 上游版权：Copyright (c) 2026 DeepSeek。
+- 上游许可：MIT；[完整原文](LICENSES/DeepSeek-Harness-MIT.txt)随改编内容保留，不以中文摘要替代。
+- 改编范围和排除理由见[迁移映射](docs/upstream-mapping.md)。
+
+改编保留通用决策、失败分支、证据要求与示例；去除产品 API、固定包路径和技术栈命令，部分专题改为条件使用。适配后不承诺与上游完全等价。未复制上游签名或媒体编码脚本、产品图像及归档资料。
+
+复用或继续分发上游原文及实质改编内容时，应保留相应版权及许可。派生项目精简模板资料时，也不能删除仍适用于保留内容的第三方声明。Harness Seed 自行新增部分的统一开源许可尚待仓库所有者选择；本声明不替所有者授予额外权利。

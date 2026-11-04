@@ -1,6 +1,8 @@
 """验证检查器确实拒绝错误，不以文案匹配冒充业务验证。"""
 import importlib.util
 import tempfile
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -99,6 +101,29 @@ class HarnessChecks(unittest.TestCase):
     def test_outside_link_rejected(self):
         self.write('README.md', '[越界](../outside.md)\n')
         self.assertTrue(MODULE.check(self.root))
+
+    def test_moving_document_requires_inbound_link_update(self):
+        self.write('docs/old.md', '# 当前说明\n')
+        self.write('README.md', '[说明](docs/old.md)\n')
+        self.assertEqual(MODULE.check(self.root), [])
+        (self.root / 'docs/old.md').rename(self.root / 'docs/new.md')
+        self.assertTrue(MODULE.check(self.root))
+        self.write('README.md', '[说明](docs/new.md)\n')
+        self.assertEqual(MODULE.check(self.root), [])
+
+    def test_cli_failure_is_nonzero(self):
+        self.write('README.md', '[缺失参考](missing.md)\n')
+        result = subprocess.run(
+            [sys.executable, str(Path(MODULE.__file__)), '--root', str(self.root)],
+            text=True, capture_output=True, check=False,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('missing.md', result.stdout + result.stderr)
+
+    def test_structure_pass_does_not_validate_business_code(self):
+        # 明确锁定覆盖边界：结构绿灯不能证明业务语义或可执行性。
+        self.write('broken.py', 'this is not valid Python!\n')
+        self.assertEqual(MODULE.check(self.root), [])
 
     def test_dependency_ignored(self):
         self.write('node_modules/a/README.md', '[错误](missing.md)\n')
