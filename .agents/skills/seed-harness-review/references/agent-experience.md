@@ -1,8 +1,3 @@
----
-name: seed-agent-experience
-description: 设计或修改 Agent 的工具接口、提示入口、上下文加载和结果输出时使用。
----
-
 # Agent 使用体验
 
 目标是减少完成任务的总工作量，同时保留可靠决策所需的信息，不是单独追求少几个 token。

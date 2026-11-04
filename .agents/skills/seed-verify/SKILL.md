@@ -43,3 +43,12 @@ description: 在声称检查通过、交付代码或已获授权的提交推送�
 ## 完成报告
 
 列明实际检查、对应范围、结果、未覆盖和阻塞；本地与远端分开，机器检查与内容审查分开。只有精确最终版本的证据支持时才声称通过。发布或部署是独立动作，不由推送成功自动授权。
+
+## 条件参考
+
+仅在本次任务涉及对应风险时读取；这些不是独立预设 Skill。
+
+- [已授权开发的范围、实施与交接](references/development-workflow.md)。
+- [已确认性能目标与可复现基准](references/performance.md)。
+- [用户要求编写 PR 说明](references/pr-description.md)。
+- [明确涉及依赖 PR 链](references/stacked-prs.md)。
