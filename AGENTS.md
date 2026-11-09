@@ -19,26 +19,26 @@
 
 | 任务或风险 | 入口 |
 | --- | --- |
-| 新项目初始化；维护模板本身不触发 | [初始化](.agents/skills/seed-initialize/SKILL.md) |
-| 项目事实、结构或文档生命周期 | [文档维护](.agents/skills/seed-doc/SKILL.md) |
-| 文字、注释、提示词的完整性与精简 | [表达标准](.agents/skills/seed-prose/SKILL.md) |
-| Notes 取代、保留、删除与归档 | [Agent Notes](.agents/skills/seed-notes/SKILL.md) |
-| 实现、接口、测试、规则和文档变更审查 | [代码审查](.agents/skills/seed-code-review/SKILL.md) |
-| 提交推送前检查与证据失效判断 | [验证](.agents/skills/seed-verify/SKILL.md) |
-| 失败、副作用、重试、取消与降级 | [错误处理](.agents/skills/seed-error-handling/SKILL.md) |
-| 并发、时序、资源与不稳定测试 | [测试可靠性](.agents/skills/seed-test-reliability/SKILL.md) |
-| 界面、交互与视觉设计和审查 | [界面](.agents/skills/seed-ui/SKILL.md) |
-| 设计 Skill、上下文加载、工作流或模型可见工具 | [Agent 体验](.agents/skills/agent-experience/SKILL.md) |
-| 不同屏幕、输入方式与响应式适配 | [响应式界面](.agents/skills/seed-responsive-ui/SKILL.md) |
-| 有依据地寻找简化与删除机会 | [简化分析](.agents/skills/seed-find-simplifications/SKILL.md) |
-| 清理文字中的会话、审查过程残留 | [过程残留清理](.agents/skills/seed-trim-cot-leakage/SKILL.md) |
-| 性能定位、基准与优化 | [性能分析](.agents/skills/seed-speed-up-perf/SKILL.md) |
-| 编写或更新 PR 说明 | [PR 说明](.agents/skills/seed-pr-description/SKILL.md) |
-| 已授权的依赖 PR 链处理 | [依赖 PR](.agents/skills/seed-merging-stacked-prs/SKILL.md) |
-| 对外破坏性变化与升级说明 | [升级指南](.agents/skills/seed-create-upgrade-guide/SKILL.md) |
-| 录制真实界面演示 | [界面录制](.agents/skills/record-browser-gif/SKILL.md) |
+| 新项目初始化；维护模板本身不触发 | [初始化](.agents/skills/seek-initialize/SKILL.md) |
+| 项目事实、结构或文档生命周期 | [文档维护](.agents/skills/seek-doc/SKILL.md) |
+| 文字、注释、提示词的完整性与精简 | [表达标准](.agents/skills/seek-prose/SKILL.md) |
+| Notes 取代、保留、删除与归档 | [Agent Notes](.agents/skills/seek-notes/SKILL.md) |
+| 实现、接口、测试、规则和文档变更审查 | [代码审查](.agents/skills/seek-code-review/SKILL.md) |
+| 提交推送前检查与证据失效判断 | [验证](.agents/skills/seek-verify/SKILL.md) |
+| 失败、副作用、重试、取消与降级 | [错误处理](.agents/skills/seek-error-handling/SKILL.md) |
+| 并发、时序、资源与不稳定测试 | [测试可靠性](.agents/skills/seek-test-reliability/SKILL.md) |
+| 界面、交互与视觉设计和审查 | [界面](.agents/skills/seek-ui/SKILL.md) |
+| 设计 Skill、上下文加载、工作流或模型可见工具 | [Agent 体验](.agents/skills/seek-agent-experience/SKILL.md) |
+| 不同屏幕、输入方式与响应式适配 | [响应式界面](.agents/skills/seek-responsive-ui/SKILL.md) |
+| 有依据地寻找简化与删除机会 | [简化分析](.agents/skills/seek-find-simplifications/SKILL.md) |
+| 清理文字中的会话、审查过程残留 | [过程残留清理](.agents/skills/seek-trim-cot-leakage/SKILL.md) |
+| 性能定位、基准与优化 | [性能分析](.agents/skills/seek-speed-up-perf/SKILL.md) |
+| 编写或更新 PR 说明 | [PR 说明](.agents/skills/seek-pr-description/SKILL.md) |
+| 已授权的依赖 PR 链处理 | [依赖 PR](.agents/skills/seek-merging-stacked-prs/SKILL.md) |
+| 对外破坏性变化与升级说明 | [升级指南](.agents/skills/seek-create-upgrade-guide/SKILL.md) |
+| 录制真实界面演示 | [界面录制](.agents/skills/seek-record-browser-gif/SKILL.md) |
 
-扩展翻译流程只允许用户明确按名称调用 `seed-translate-docs`；其他 Skill 不得自动选择或加载它。普通多语言同步按项目已有文档约定处理，不因此启动扩展流程。
+扩展翻译流程只允许用户明确按名称调用 `seek-translate-docs`；其他 Skill 不得自动选择或加载它。普通多语言同步按项目已有文档约定处理，不因此启动扩展流程。
 
 ## 本仓库验证
 

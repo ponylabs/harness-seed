@@ -16,7 +16,7 @@ git diff --check
 
 ## 归档验证
 
-归档规范与操作见 [Notes 规范](../.agents/notes/README.md) 和 [归档 Skill](../.agents/skills/seed-notes/SKILL.md)。普通检查只读，封存是显式写操作。新归档进入封存前先核对生命周期及内容；封存工具不能把旧归档的改动合法化。
+归档规范与操作见 [Notes 规范](../.agents/notes/README.md) 和 [归档 Skill](../.agents/skills/seek-notes/SKILL.md)。普通检查只读，封存是显式写操作。新归档进入封存前先核对生命周期及内容；封存工具不能把旧归档的改动合法化。
 
 本地默认对比 Git `HEAD`，可用 `HARNESS_ARCHIVE_BASE_REF` 指定可信的变更前提交。CI 使用完整 Git 历史：PR 对比事件的 base SHA，push 对比事件的 before SHA；首次推送的全零 SHA 表示没有旧基准。正文与封存清单同时修改，也不能覆盖可信基准里的旧记录。基准缺失或不可读时不能把非空归档报告为验证通过。
 
@@ -26,7 +26,7 @@ git diff --check
 
 GitHub Actions 执行相同检查器和单元测试，并检查当前提交全部跟踪文件的空白错误。是否通过必须以精确提交的远端结果为准，本地测试不能代替远端运行。
 
-派生项目初始化时建立真实业务验证并接入本地与 CI。业务函数、接口、数据库、构建产物、UI 各按实际行为验证；保留模板检查不意味着业务已验证。初始化交接见 [seed-initialize](../.agents/skills/seed-initialize/SKILL.md)。
+派生项目初始化时建立真实业务验证并接入本地与 CI。业务函数、接口、数据库、构建产物、UI 各按实际行为验证；保留模板检查不意味着业务已验证。初始化交接见 [seek-initialize](../.agents/skills/seek-initialize/SKILL.md)。
 
 ## 实际 Agent 场景验收
 

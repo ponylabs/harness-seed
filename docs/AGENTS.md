@@ -1,6 +1,6 @@
 # 文档约定
 
-本文件拥有人类可读文档的类型、固定名称、创建条件与职责边界；Agent Notes 格式由其自身规范拥有。维护方法见 [seed-doc](../.agents/skills/seed-doc/SKILL.md)，表达判断见 [seed-prose](../.agents/skills/seed-prose/SKILL.md)。不在 Skill 中维护另一套目录规范。
+本文件拥有人类可读文档的类型、固定名称、创建条件与职责边界；Agent Notes 格式由其自身规范拥有。维护方法见 [seek-doc](../.agents/skills/seek-doc/SKILL.md)，表达判断见 [seek-prose](../.agents/skills/seek-prose/SKILL.md)。不在 Skill 中维护另一套目录规范。
 
 ## 固定入口
 
@@ -30,7 +30,7 @@ README 链接事实拥有者，不能手工复制全部操作与验证细节。�
 | `docs/cookbook/<主题>.md` | 可重复操作需要前提、步骤、结果与失败恢复 |
 | `docs/defensive-patterns/<主题>.md` | 项目需要在审查中执行的防错规则；记录适用对象、反例和验证 |
 | `docs/postmortem/NNNN-<主题>.md` | 真实事故按四位递增编号命名，需要时间边界、原因、影响、补救和预防证据 |
-| `.agents/notes/<状态>/<类别>/yyyy-mm-dd-<主题>.md` | 非平凡选择需要保存理由、替代与后果；格式、状态和生命周期见 [Notes 规范](../.agents/notes/README.md)，归档操作由 seed-notes 执行 |
+| `.agents/notes/<状态>/<类别>/yyyy-mm-dd-<主题>.md` | 非平凡选择需要保存理由、替代与后果；格式、状态和生命周期见 [Notes 规范](../.agents/notes/README.md)，归档操作由 seek-notes 执行 |
 | `docs/web-styling.md` | 项目涉及 Web；记录实际样式系统、布局、字体、颜色、间距、组件复用、主题与响应式约定 |
 | `docs/ui-radius.md` | 项目涉及 Web 且需统一组件形状；记录半径 token、使用映射、嵌套关系和经确认的例外 |
 | `docs/upgrade-guide/v<版本>/<条目>/guide.md` | 有对外破坏性变化；版本表示从该版本升级，按条目记录影响、旧新行为和已验证迁移步骤，不建立根 README |

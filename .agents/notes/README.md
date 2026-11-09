@@ -1,6 +1,6 @@
 # Agent Notes
 
-Agent Note 保存代码、测试和当前文档不能充分解释的长期提案与决策：为什么这样选择，以及放弃了什么。本页拥有记录位置、创建条件、格式和生命周期规则；操作方法见 [seed-notes](../skills/seed-notes/SKILL.md)。
+Agent Note 保存代码、测试和当前文档不能充分解释的长期提案与决策：为什么这样选择，以及放弃了什么。本页拥有记录位置、创建条件、格式和生命周期规则；操作方法见 [seek-notes](../skills/seek-notes/SKILL.md)。
 
 ## 位置与分类
 

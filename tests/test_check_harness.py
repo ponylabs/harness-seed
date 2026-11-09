@@ -10,6 +10,29 @@ SPEC = importlib.util.spec_from_file_location('check_harness', Path(__file__).re
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
+class BundledSkillNames(unittest.TestCase):
+    """检查模板自带入口；不限制派生项目自建 Skill 的命名。"""
+
+    def test_bundled_names_and_routes(self):
+        root = Path(__file__).resolve().parents[1]
+        skills = list((root / '.agents/skills').glob('*/SKILL.md'))
+        self.assertTrue(skills)
+        routing = (root / 'AGENTS.md').read_text(encoding='utf-8')
+        for skill in skills:
+            with self.subTest(skill=skill.parent.name):
+                self.assertTrue(skill.parent.name.startswith('seek-'))
+                metadata = skill.read_text(encoding='utf-8').split('---', 2)[1]
+                self.assertIn(f'name: {skill.parent.name}', metadata.splitlines())
+                self.assertIn(skill.parent.name, routing)
+
+    def test_translation_remains_manual(self):
+        root = Path(__file__).resolve().parents[1]
+        skill = root / '.agents/skills/seek-translate-docs/SKILL.md'
+        metadata = skill.read_text(encoding='utf-8').split('---', 2)[1]
+        self.assertIn('disable-model-invocation: true', metadata.splitlines())
+        self.assertIn('user-invocable: true', metadata.splitlines())
+
+
 class HarnessChecks(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
