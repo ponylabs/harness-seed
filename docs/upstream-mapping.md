@@ -211,6 +211,10 @@
 
 `seek-initialize` 是模板专有能力：把六文档和真实验证链交接给派生项目，不冒称上游有对应 Skill。六固定文件、中文默认与 Python 标准库检查实现是明确的模板适配；没有新增统一治理调度器。实际验证范围见 [测试说明](testing.md)。
 
+## 事实归属、兼容与失败验证
+
+文档维护按上游 `docs/AGENTS.md` 的单一归属和冗余检查清单，避免在架构页复制测试/包清单；具体测试与命令由最低拥有层和实际配置维护。`seek-doc` 在涉及持久化或跨版本契约的格式、默认行为与错误策略变化时读取既有兼容参考，分别验证两个读写方向，依据上游 [persistence-change 模板](https://github.com/deepseek-ai/deepseek-harness/blob/fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159/.agents/skills/dsh-doc/templates/persistence-change.md)。`seek-code-review` 与 `seek-verify` 将上游真实入口、接口两端和负例验证应用到受影响的多阶段失败路径，失败示例补充输入与序列化/持久化交互；行为变化需要核对消费者，但不因此创建上游仅用于持久化类型变化的记录。这些是上游方法的通用例证，不是新增全局流水线或数值禁令。语义审查仍需实际执行，结构检查不能证明这些判断正确。
+
 ## 自动检查取舍
 
 - **已适配的通用规则**：Notes 分类、格式、状态、旧 RFC 目录拒绝与归档封存；保留 Skill 调用元数据并验证其格式；本地链接与固定入口检查。Python 实现不是上游 TypeScript 脚本原样复制。Notes 直接参考上游 [分类检查](https://github.com/deepseek-ai/deepseek-harness/blob/fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159/scripts/verify-agent-note-classification.ts)、[格式检查](https://github.com/deepseek-ai/deepseek-harness/blob/fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159/scripts/verify-agent-note-format.ts) 和[归档封存实现](https://github.com/deepseek-ai/deepseek-harness/blob/fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159/scripts/archived-agent-notes.ts)。
