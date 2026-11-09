@@ -9,7 +9,7 @@
 - 开发本模板：[开发说明](docs/development.md)。
 - 了解固定名称与按需目录：[文档约定](docs/AGENTS.md)。
 - 查看方法与边界：[设计说明](docs/architecture.md)。
-- 查看已执行和可复现的检查：[验证说明](docs/testing.md)。
+- 查看检查方法与覆盖范围：[验证说明](docs/testing.md)。
 
 初始化完成后，新项目应替换本 README 为真实项目说明，移除不再适用的模板教程和链接，并同步实际本地验证与 CI。保留适用改编内容时也要保留必要版权与许可。保留可复用 Skill 不等于保留初始化问卷。
 
@@ -18,7 +18,7 @@
 - 根 AGENTS：全局约束和阅读入口；子 AGENTS 仅为真实存在的局部约束创建。
 - README 与项目文档：用途、边界、契约、操作方法等事实；不复制 Skill 的工作教程。
 - `.agents/skills/`：通用开发与文档工作流，以及按场景加载的错误、测试、UI、性能、发布等专题；入口与触发条件见 AGENTS。
-- `scripts/check_harness.py` 与测试：用 Python 标准库检查六个固定入口、Notes 路径/日期、Skill 元数据和活跃 Markdown 文件链接，并测试检查器的失败路径。
+- `scripts/check_harness.py` 与测试：用 Python 标准库检查六个固定入口、Notes 格式与冻结、Skill 元数据和活跃 Markdown 文件链接，并测试检查器的失败路径。
 - GitHub Actions：执行同一套检查。工作流不等于已配置分支保护，也不保证所有 Agent 自动读取规则。
 
 ## 本地检查
@@ -31,6 +31,6 @@
 
 ## 来源与许可
 
-本轮 Skill 依据 [DeepSeek Harness 固定版本](https://github.com/deepseek-ai/deepseek-harness/tree/8bd073392eef6f54e921a093b95076248eb08cbb) 做中文翻译和适配。保留通用判断细节，移除产品专属命令与强制技术假设，不是官方模板，也不声称完全等价。
+本轮 Skill 依据 [DeepSeek Harness 固定版本](https://github.com/deepseek-ai/deepseek-harness/tree/fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159) 做中文翻译和适配。保留通用判断细节，移除产品专属命令与强制技术假设，不是官方模板，也不声称完全等价。
 
-十个预设 Skill 与全部 22 个上游 Skill 的对应去向见[迁移映射](docs/upstream-mapping.md)，版权和 MIT 原文见[第三方声明](THIRD_PARTY_NOTICES.md)。本仓库自行新增部分的统一开源许可尚待所有者决定，不能将公开可见理解为任意再分发许可。
+独立 Skill 入口与全部 22 个上游 Skill 的对应去向见[迁移映射](docs/upstream-mapping.md)，版权和 MIT 原文见[第三方声明](THIRD_PARTY_NOTICES.md)。本仓库自行新增部分的统一开源许可尚待所有者决定，不能将公开可见理解为任意再分发许可。

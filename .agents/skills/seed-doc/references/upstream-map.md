@@ -1,6 +1,6 @@
 # 文档 Skill 迁移覆盖
 
-本 Skill 改编自 DeepSeek Harness 固定提交 `8bd073392eef6f54e921a093b95076248eb08cbb` 的 [dsh-doc](https://github.com/deepseek-ai/deepseek-harness/blob/8bd073392eef6f54e921a093b95076248eb08cbb/.agents/skills/dsh-doc/SKILL.md)，不是对上游最新版本的持续同步承诺。中文改写保留通用决策与失败分支，未复制产品目录或执行命令作为通用事实。
+本 Skill 核心文档方法改编自 DeepSeek Harness 固定提交 `8bd073392eef6f54e921a093b95076248eb08cbb` 的 [dsh-doc](https://github.com/deepseek-ai/deepseek-harness/blob/8bd073392eef6f54e921a093b95076248eb08cbb/.agents/skills/dsh-doc/SKILL.md)，不是对上游最新版本的持续同步承诺。本轮对照 `fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159`，升级指南已恢复独立的 seed-create-upgrade-guide 入口；扩展翻译恢复独立且只能按名称手动调用的 seed-translate-docs，不能从普通文档流程自动加载。中文改写保留通用决策与失败分支，未复制产品目录或执行命令作为通用事实。
 
 Copyright (c) 2026 DeepSeek。上游为 MIT；完整许可见 [DeepSeek Harness MIT](../../../../LICENSES/DeepSeek-Harness-MIT.txt)，归属说明见 [第三方通知](../../../../THIRD_PARTY_NOTICES.md)。
 

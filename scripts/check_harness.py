@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""检查固定文档骨架、Agent Notes 路径、Skill 元数据和活跃 Markdown 文件链接，不访问网络。"""
+"""检查固定文档骨架、Agent Notes 路径/格式/冻结封存、Skill 元数据和活跃 Markdown 文件链接，不访问网络。"""
 import argparse
 import os
+import hashlib
+import json
+import subprocess
 from datetime import date
 import re
 from pathlib import Path
@@ -88,10 +91,177 @@ def check_note_path(relative: Path) -> list[str]:
         return [f'Agent Note 首次提出日期无效：{relative}']
     return []
 
-def check(root: Path) -> list[str]:
+def prose_lines(content: str) -> list[str]:
+    """排除围栏中的格式示例，不把示例标题/状态当成记录结构。"""
+    result, fence, length = [], '', 0
+    for line in content.splitlines():
+        marker = re.match(r'^ {0,3}(`{3,}|~{3,})(.*)$', line)
+        if marker:
+            if not fence:
+                fence, length = marker[1][0], len(marker[1])
+            elif marker[1][0] == fence and len(marker[1]) >= length and not marker[2].strip():
+                fence = ''
+            continue
+        if not fence:
+            result.append(line)
+    return result
+
+
+def check_note_format(relative: Path, content: str) -> list[str]:
+    """改编上游 verify-agent-note-format；单语言中文章节，无产品历史豁免。"""
+    if relative.parts[:2] != ('.agents', 'notes') or len(relative.parts) != 5:
+        return []
+    lifecycle = relative.parts[2]
+    if lifecycle not in {'proposed', 'implemented', 'rejected'}:
+        return []
+    errors, lines = [], content.splitlines()
+    def fail(message):
+        errors.append(f'Agent Note 格式：{relative}：{message}')
+    if not lines or not re.match(r'^# Agent Note: \S', lines[0]):
+        fail('首行必须为 # Agent Note: <主题>')
+    if len(lines) < 4 or lines[1] != '' or lines[3] != '':
+        fail('第 2、4 行必须为空行')
+    expected = {'proposed': r'Status: proposed', 'implemented': r'Status: implemented',
+                'rejected': r'Status: rejected — \S.*'}[lifecycle]
+    if len(lines) < 3 or not re.fullmatch(expected, lines[2]):
+        fail('第 3 行状态必须与目录匹配；拒绝状态须有原因')
+    prose = prose_lines(content)
+    if len([line for line in prose if line.startswith('Status:')]) != 1:
+        fail('全篇必须只有一条 Status 行')
+    headings = [line.rstrip() for line in prose if line.startswith('## ')]
+    if not headings or headings[0] != '## 问题':
+        fail('正文首个二级标题必须为 问题')
+    required = {'proposed': ('提案', '验收条件', '风险'),
+                'implemented': ('决策', '后果'), 'rejected': ('提案',)}[lifecycle]
+    for heading in (*required, '考虑过的替代方案'):
+        if f'## {heading}' not in headings:
+            fail(f'缺少必要章节：{heading}')
+    if lifecycle == 'implemented':
+        for heading in headings:
+            if re.match(r'^## (?:提案|计划|迁移计划|验收条件|Proposal\b|Plan\b|Migration plan\b|Acceptance criteria\b)', heading, re.I):
+                fail(f'已实现记录不保留提案期标题：{heading}')
+    if any('XXX: legacy ADR/' in line for line in prose):
+        fail('不保留旧格式债务标记')
+    return errors
+
+
+ARCHIVE_MANIFEST = '.agents/notes/archived/manifest.json'
+
+
+def parse_manifest(content: str) -> dict[str, str]:
+    value = json.loads(content)
+    if not isinstance(value, dict) or set(value) != {'version', 'files'} or type(value['version']) is not int or value['version'] != 1 or not isinstance(value['files'], dict):
+        raise ValueError('manifest 必须只含 version: 1 与 files 对象')
+    for path, digest in value['files'].items():
+        if not isinstance(digest, str) or not re.fullmatch(r'sha256:[0-9a-f]{64}', digest):
+            raise ValueError(f'manifest 哈希无效：{path}')
+    return value['files']
+
+
+def archive_plan(root: Path, seal: bool = False, baseline_ref: str | None = None):
+    """单语言移植上游 append-only archive verifier；校验成功后由调用者写入。"""
+    archive = root / '.agents/notes/archived'
+    manifest_path = root / ARCHIVE_MANIFEST
+    errors, artifacts, existing = [], {}, {}
+    if any(path.is_symlink() for path in (root / '.agents', root / '.agents/notes', archive)):
+        return ['归档目录及其父目录不能是符号链接'], None
+    if archive.exists():
+        if not archive.is_dir():
+            return ['归档路径必须为目录'], None
+        for entry in sorted(archive.iterdir()):
+            if entry.is_symlink():
+                errors.append(f'归档不允许符号链接：{entry.relative_to(root)}')
+            elif entry.is_file():
+                if entry.name not in {'AGENTS.md', 'manifest.json'}:
+                    errors.append(f'归档根目录文件无效：{entry.name}')
+            elif not entry.is_dir() or entry.name not in NOTE_CLASSES:
+                errors.append(f'归档类别无效：{entry.name}')
+            else:
+                for child in sorted(entry.iterdir()):
+                    relative = child.relative_to(root)
+                    if child.is_symlink() or not child.is_file():
+                        errors.append(f'归档仅允许普通记录文件：{relative}')
+                        continue
+                    path_errors = check_note_path(relative)
+                    if path_errors:
+                        errors.extend(path_errors)
+                        continue
+                    try:
+                        data = child.read_bytes()
+                        lines = data.decode('utf-8').splitlines()
+                    except (OSError, UnicodeError) as exc:
+                        errors.append(f'无法读取归档 {relative}：{exc}')
+                        continue
+                    status = next((i for i, line in enumerate(lines) if line.startswith('Status:')), -1)
+                    archived = re.fullmatch(r'Archived: (\d{4}-\d{2}-\d{2})', lines[status + 1]) if status >= 0 and status + 1 < len(lines) else None
+                    valid = status >= 0 and lines[status] == 'Status: implemented' and archived is not None
+                    if valid:
+                        try:
+                            date.fromisoformat(archived[1])
+                            valid = archived[1] >= child.name[:10]
+                        except ValueError:
+                            valid = False
+                    if not valid:
+                        errors.append(f'归档元数据无效：{relative}（implemented 后须为有效且不早于首次日期的 Archived 日期）')
+                    artifacts[child.relative_to(archive).as_posix()] = 'sha256:' + hashlib.sha256(data).hexdigest()
+        if not (archive / 'AGENTS.md').is_file():
+            errors.append('归档缺少 archived/AGENTS.md')
+        if manifest_path.exists() and not manifest_path.is_symlink():
+            try:
+                existing = parse_manifest(manifest_path.read_text(encoding='utf-8'))
+            except (OSError, UnicodeError, ValueError) as exc:
+                errors.append(f'归档 manifest 无效：{exc}')
+        elif not seal:
+            errors.append('归档缺少 manifest.json；使用 --seal-archives 封存新文件')
+    # 与可信变更前 Git 基准比较，防止同时篡改正文和 manifest。
+    explicit = baseline_ref is not None or 'HARNESS_ARCHIVE_BASE_REF' in os.environ
+    ref = baseline_ref if baseline_ref is not None else os.environ.get('HARNESS_ARCHIVE_BASE_REF', 'HEAD')
+    def git(*args):
+        result = subprocess.run(['git', *args], cwd=root, capture_output=True, text=True, check=False)
+        if result.returncode:
+            raise ValueError(result.stderr.strip() or 'Git 基准读取失败')
+        return result.stdout
+    try:
+        if explicit and ref == '0' * 40:
+            baseline = {}  # GitHub 首次 push 没有变更前提交。
+        else:
+            git('rev-parse', '--verify', f'{ref}^{{commit}}')
+            baseline = parse_manifest(git('show', f'{ref}:{ARCHIVE_MANIFEST}')) if git('ls-tree', '--name-only', ref, '--', ARCHIVE_MANIFEST).strip() else {}
+        for path, digest in baseline.items():
+            if existing.get(path) != digest:
+                errors.append(f'归档基准封存被改变或删除：{path}')
+    except (OSError, ValueError) as exc:
+        if explicit or artifacts or existing:
+            errors.append(f'无法读取归档基准 {ref!r}：{exc}')
+    for path, digest in existing.items():
+        if path not in artifacts:
+            errors.append(f'已封存归档文件缺失：{path}')
+        elif artifacts[path] != digest:
+            errors.append(f'已封存归档内容改变：{path}')
+    added = {path: digest for path, digest in artifacts.items() if path not in existing}
+    if not seal:
+        errors.extend(f'归档尚未封存：{path}' for path in added)
+    rendered = json.dumps({'version': 1, 'files': dict(sorted((existing | added).items()))}, ensure_ascii=False, indent=2) + '\n'
+    return errors, rendered if archive.exists() else None
+
+
+def check(root: Path, *, seal_archives: bool = False, baseline_ref: str | None = None) -> list[str]:
     """返回错误列表；不读取仓库之外的符号链接目标。"""
     root = root.resolve()
     errors = []
+    for legacy in ('docs/rfc', 'docs/rfcs'):
+        if (root / legacy).exists():
+            errors.append(f'旧 Notes 位置禁止使用：{legacy}')
+    notes_root = root / '.agents/notes'
+    if notes_root.is_dir() and not notes_root.is_symlink():
+        for lifecycle in notes_root.iterdir():
+            if lifecycle.is_dir() and not lifecycle.is_symlink():
+                if lifecycle.name not in NOTE_LIFECYCLES:
+                    errors.append(f'Agent Notes 未知状态目录：{lifecycle.name}')
+                else:
+                    for kind in lifecycle.iterdir():
+                        if kind.is_dir() and kind.name not in NOTE_CLASSES:
+                            errors.append(f'Agent Notes 未知类别目录：{kind.relative_to(root)}')
     for name in REQUIRED_DOCUMENTS:
         path = root / name
         if not path.is_file():
@@ -134,6 +304,7 @@ def check(root: Path) -> list[str]:
         except (OSError, UnicodeError) as exc:
             errors.append(f'无法读取 {relative}：{exc}')
             continue
+        errors.extend(check_note_format(relative, content))
         if path.name == 'SKILL.md' and relative.parts[:2] == ('.agents', 'skills'):
             header = re.match(r'\A---\n(.*?)\n---(?:\n|$)', content, re.S)
             fields = {}
@@ -141,7 +312,12 @@ def check(root: Path) -> list[str]:
                 for line in header.group(1).splitlines():
                     key, sep, value = line.partition(':')
                     if sep:
-                        fields[key.strip()] = value.strip().strip('\"\'').strip()
+                        key = key.strip()
+                        if key in fields:
+                            errors.append(f'Skill 元数据字段重复：{relative}：{key}')
+                        if key in {'disable-model-invocation', 'user-invocable'} and value.strip() not in {'true', 'false'}:
+                            errors.append(f'Skill 调用元数据必须为 YAML 布尔值 true/false：{relative}：{key}')
+                        fields[key] = value.strip().strip('\"\'').strip()
             name = fields.get('name', '')
             if name != path.parent.name or not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', name):
                 errors.append(f'Skill 名称缺失、无效或与目录不一致：{relative}')
@@ -181,21 +357,26 @@ def check(root: Path) -> list[str]:
                     errors.append(f'链接越过仓库边界：{relative}:{number} → {target}')
                 elif not destination.exists():
                     errors.append(f'失效文件链接：{relative}:{number} → {target}')
+    archive_errors, rendered = archive_plan(root, seal_archives, baseline_ref)
+    errors.extend(archive_errors)
+    if seal_archives and not errors and rendered is not None:
+        (root / ARCHIVE_MANIFEST).write_text(rendered, encoding='utf-8')
     return errors
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=Path(__file__).resolve().parents[1], help='待检查的仓库根目录')
+    parser.add_argument('--seal-archives', action='store_true', help='验证旧封存后，仅追加新归档文件哈希')
     args = parser.parse_args()
     if not args.root.is_dir():
         print(f'检查失败：目录不存在：{args.root}')
         return 1
-    errors = check(args.root)
+    errors = check(args.root, seal_archives=args.seal_archives)
     if errors:
         print('\n'.join(errors))
         print(f'检查失败：共 {len(errors)} 项问题。')
         return 1
-    print('检查通过：固定文档骨架、Agent Notes 路径、Skill 元数据和活跃文件链接正常。')
+    print('检查通过：固定文档骨架、Agent Notes 格式/封存、Skill 元数据和活跃文件链接正常。')
     return 0
 
 if __name__ == '__main__':

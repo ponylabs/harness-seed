@@ -27,6 +27,31 @@ class HarnessChecks(unittest.TestCase):
         target.write_text(text, encoding='utf-8')
         return target
 
+    def note(self, lifecycle='implemented'):
+        status = 'implemented' if lifecycle == 'archived' else lifecycle
+        if status == 'rejected':
+            status += ' — 方案不适合'
+        content = f'# Agent Note: 测试决定\n\nStatus: {status}\n'
+        if lifecycle == 'archived':
+            content += 'Archived: 2026-11-05\n'
+        content += '\n## 问题\n真实问题。\n'
+        headings = ('决策', '考虑过的替代方案', '后果') if lifecycle in ('implemented', 'archived') else ('提案', '考虑过的替代方案', '验收条件', '风险')
+        return content + ''.join(f'\n## {heading}\n说明。\n' for heading in headings)
+
+    def init_git(self):
+        subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
+        self.git('config', 'user.email', 'fixture@example.invalid')
+        self.git('config', 'user.name', 'Test Fixture')
+        self.git('add', '.')
+        self.git('commit', '-qm', 'fixture baseline')
+
+    def git(self, *args):
+        return subprocess.run(['git', *args], cwd=self.root, check=True, capture_output=True, text=True).stdout.strip()
+
+    def seal(self):
+        self.write('.agents/notes/archived/AGENTS.md', '# 冻结规则\n')
+        self.assertEqual(MODULE.check(self.root, seal_archives=True), [])
+
     def test_minimal_project(self):
         self.assertEqual(MODULE.check(self.root), [])
 
@@ -49,13 +74,15 @@ class HarnessChecks(unittest.TestCase):
         self.assertEqual(MODULE.check(self.root), [])
 
     def test_all_note_lifecycles_and_classes(self):
+        self.init_git()
         for lifecycle in MODULE.NOTE_LIFECYCLES:
             for kind in MODULE.NOTE_CLASSES:
-                self.write(f'.agents/notes/{lifecycle}/{kind}/2026-11-04-example.md', '# 决策\n')
+                self.write(f'.agents/notes/{lifecycle}/{kind}/2026-11-04-example.md', self.note(lifecycle))
+        self.seal()
         self.assertEqual(MODULE.check(self.root), [])
 
     def test_notes_control_documents(self):
-        for scope in ('', 'proposed/', 'implemented/', 'rejected/', 'archived/'):
+        for scope in ('', 'proposed/', 'implemented/', 'rejected/'):
             for name in ('README.md', 'AGENTS.md'):
                 self.write(f'.agents/notes/{scope}{name}', '# 规则\n')
         self.assertEqual(MODULE.check(self.root), [])
@@ -81,19 +108,22 @@ class HarnessChecks(unittest.TestCase):
     def test_notes_move_and_inbound_links_follow_lifecycle(self):
         old = '.agents/notes/proposed/architecture/2026-11-04-boundary.md'
         new = '.agents/notes/implemented/architecture/2026-11-04-boundary.md'
-        self.write(old, '# 决策\n')
+        self.write(old, self.note('proposed'))
         self.write('README.md', f'[决策]({old})\n')
         self.assertEqual(MODULE.check(self.root), [])
         target = self.root / new
         target.parent.mkdir(parents=True, exist_ok=True)
         (self.root / old).rename(target)
         self.assertTrue(MODULE.check(self.root))
+        self.write(new, self.note('implemented'))
         self.write('README.md', f'[决策]({new})\n')
         self.assertEqual(MODULE.check(self.root), [])
 
     def test_archive_preserves_historical_outbound_links(self):
         name = '.agents/notes/archived/architecture/2026-11-04-boundary.md'
-        self.write(name, '# 冻结决策\n[历史路径](removed.md)\n')
+        self.init_git()
+        self.write(name, self.note('archived') + '[历史路径](removed.md)\n')
+        self.seal()
         self.write('README.md', f'[历史决策]({name})\n')
         self.assertEqual(MODULE.check(self.root), [])
         (self.root / name).unlink()
@@ -107,9 +137,184 @@ class HarnessChecks(unittest.TestCase):
         self.write('.agents/notes/implemented/process/2026-11-04-checks.md', '[失效](missing.md)\n')
         self.assertTrue(MODULE.check(self.root))
 
+    def test_note_format_invalid_variants(self):
+        good = self.note()
+        cases = (
+            good.replace('# Agent Note: 测试决定', '# 决策'),
+            good.replace('Status: implemented', 'Status: proposed'),
+            good.replace('Status: implemented', 'Status: implemented (done)'),
+            good.replace('## 问题', '## 背景'),
+            good.replace('## 决策', '## 提案'),
+            good.replace('## 考虑过的替代方案', '## 其他'),
+            good + '\nStatus: implemented\n',
+            good + '\n## 计划\n',
+            good + '\n## Migration plan\n',
+            good.replace('\n\nStatus:', '\nStatus:'),
+        )
+        for content in cases:
+            with self.subTest(content=content):
+                self.write('.agents/notes/implemented/process/2026-11-04-example.md', content)
+                self.assertTrue(any('格式' in error for error in MODULE.check(self.root)))
+
+    def test_note_format_fenced_examples_not_structure(self):
+        self.write('.agents/notes/implemented/process/2026-11-04-example.md', self.note() + '\n````md\n```\nStatus: proposed\n## 提案\n````\n')
+        self.assertEqual(MODULE.check(self.root), [])
+
+    def test_required_heading_inside_fence_does_not_count(self):
+        self.write('.agents/notes/implemented/process/2026-11-04-example.md', self.note().replace('## 后果', '```md\n## 后果\n```'))
+        self.assertTrue(MODULE.check(self.root))
+
+    def test_rejected_reason_required_and_proposal_preserved(self):
+        path = '.agents/notes/rejected/process/2026-11-04-example.md'
+        self.write(path, self.note('rejected'))
+        self.assertEqual(MODULE.check(self.root), [])
+        self.write(path, self.note('rejected').replace(' — 方案不适合', ''))
+        self.assertTrue(MODULE.check(self.root))
+
+    def test_legacy_note_roots_rejected_even_empty(self):
+        for path in ('docs/rfc', 'docs/rfcs'):
+            target = self.root / path
+            target.mkdir()
+            self.assertTrue(any('旧 Notes' in error for error in MODULE.check(self.root)))
+            target.rmdir()
+
+    def test_unknown_empty_note_directories_rejected(self):
+        for path in ('draft', 'implemented/refactor', 'archived/refactor'):
+            target = self.root / '.agents/notes' / path
+            target.mkdir(parents=True)
+            self.assertTrue(MODULE.check(self.root))
+            target.rmdir()
+
+    def prepare_archive(self):
+        self.init_git()
+        path = '.agents/notes/archived/process/2026-11-04-example.md'
+        self.write(path, self.note('archived'))
+        self.write('.agents/notes/archived/AGENTS.md', '# 冻结规则\n')
+        return path
+
+    def test_archive_must_be_sealed(self):
+        self.prepare_archive()
+        self.assertTrue(any('封存' in error for error in MODULE.check(self.root)))
+        self.seal()
+        self.assertEqual(MODULE.check(self.root), [])
+
+    def test_seal_is_idempotent_and_appends_only(self):
+        self.prepare_archive()
+        self.seal()
+        first = (self.root / MODULE.ARCHIVE_MANIFEST).read_bytes()
+        self.seal()
+        self.assertEqual((self.root / MODULE.ARCHIVE_MANIFEST).read_bytes(), first)
+        self.write('.agents/notes/archived/process/2026-11-04-other.md', self.note('archived'))
+        self.seal()
+        values = MODULE.parse_manifest((self.root / MODULE.ARCHIVE_MANIFEST).read_text())
+        self.assertEqual(len(values), 2)
+
+    def test_archive_changes_and_deletions_rejected_even_in_write_mode(self):
+        path = self.prepare_archive()
+        self.seal()
+        manifest = (self.root / MODULE.ARCHIVE_MANIFEST).read_bytes()
+        self.write(path, self.note('archived') + '\n篡改\n')
+        self.assertTrue(MODULE.check(self.root, seal_archives=True))
+        self.assertEqual((self.root / MODULE.ARCHIVE_MANIFEST).read_bytes(), manifest)
+        (self.root / path).unlink()
+        self.assertTrue(MODULE.check(self.root, seal_archives=True))
+
+    def test_committed_seal_cannot_be_replaced_with_matching_new_content(self):
+        path = self.prepare_archive()
+        self.seal()
+        self.git('add', '.')
+        self.git('commit', '-qm', 'seal')
+        self.write(path, self.note('archived') + '\n篡改\n')
+        data = (self.root / path).read_bytes()
+        relative = 'process/2026-11-04-example.md'
+        self.write(MODULE.ARCHIVE_MANIFEST, MODULE.json.dumps({'version': 1, 'files': {relative: 'sha256:' + MODULE.hashlib.sha256(data).hexdigest()}}))
+        errors = MODULE.check(self.root, seal_archives=True)
+        self.assertTrue(any('基准封存' in error for error in errors))
+
+    def test_removing_entire_archive_cannot_erase_committed_seals(self):
+        import shutil
+        self.prepare_archive()
+        self.seal()
+        self.git('add', '.')
+        self.git('commit', '-qm', 'seal')
+        shutil.rmtree(self.root / '.agents/notes/archived')
+        self.assertTrue(any('基准封存' in error for error in MODULE.check(self.root)))
+
+    def test_archive_metadata_invalid_variants(self):
+        path = self.prepare_archive()
+        for old, new in (('implemented', 'proposed'), ('2026-11-05', '2026-02-30'), ('2026-11-05', '2026-11-03'), ('Archived:', 'Archive:')):
+            self.write(path, self.note('archived').replace(old, new))
+            self.assertTrue(MODULE.check(self.root, seal_archives=True))
+            self.assertFalse((self.root / MODULE.ARCHIVE_MANIFEST).exists())
+
+    def test_archive_keeps_historical_body_format(self):
+        path = self.prepare_archive()
+        self.write(path, '# 历史标题\n\nStatus: implemented\nArchived: 2026-11-05\n\n历史正文无现代章节。\n')
+        self.seal()
+        self.assertEqual(MODULE.check(self.root), [])
+
+    def test_archive_invalid_manifest_schema(self):
+        self.prepare_archive()
+        for value in ('[]', '{"version": 1, "files": {}, "extra": true}', '{"version": true, "files": {}}', '{"version": 1, "files": {"x": "bad"}}', '{'):
+            self.write(MODULE.ARCHIVE_MANIFEST, value)
+            self.assertTrue(MODULE.check(self.root, seal_archives=True))
+            self.assertEqual((self.root / MODULE.ARCHIVE_MANIFEST).read_text(), value)
+
+    def test_nonempty_archive_requires_readable_git_baseline(self):
+        self.write('.agents/notes/archived/process/2026-11-04-example.md', self.note('archived'))
+        self.write('.agents/notes/archived/AGENTS.md', '# 规则\n')
+        self.assertTrue(any('基准' in error for error in MODULE.check(self.root, seal_archives=True)))
+
+    def test_ci_zero_before_is_explicit_empty_baseline(self):
+        self.write('.agents/notes/archived/process/2026-11-04-example.md', self.note('archived'))
+        self.write('.agents/notes/archived/AGENTS.md', '# 规则\n')
+        self.assertEqual(MODULE.check(self.root, seal_archives=True, baseline_ref='0' * 40), [])
+        self.assertTrue(MODULE.check(self.root, baseline_ref='does-not-exist'))
+
+    def test_archive_parent_symlink_is_not_followed(self):
+        with tempfile.TemporaryDirectory() as outside:
+            path = self.root / '.agents'
+            path.symlink_to(outside, target_is_directory=True)
+            self.assertTrue(any('符号链接' in error for error in MODULE.check(self.root, seal_archives=True)))
+
+    def test_seal_does_not_write_when_other_validation_fails(self):
+        self.prepare_archive()
+        self.write('README.md', '[坏链接](missing.md)\n')
+        self.assertTrue(MODULE.check(self.root, seal_archives=True))
+        self.assertFalse((self.root / MODULE.ARCHIVE_MANIFEST).exists())
+
+    def test_notes_format_and_archive_cli_failures(self):
+        self.prepare_archive()
+        script = str(Path(MODULE.__file__))
+        result = subprocess.run([sys.executable, script, '--root', str(self.root), '--seal-archives'], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.write('.agents/notes/implemented/process/2026-11-04-invalid.md', '# invalid\n')
+        result = subprocess.run([sys.executable, script, '--root', str(self.root)], capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('格式', result.stdout)
+        (self.root / '.agents/notes/implemented/process/2026-11-04-invalid.md').unlink()
+        self.write('.agents/notes/archived/process/2026-11-04-example.md', self.note('archived') + '\nchanged\n')
+        result = subprocess.run([sys.executable, script, '--root', str(self.root), '--seal-archives'], capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('内容改变', result.stdout)
+
     def test_valid_skill(self):
         self.write('.agents/skills/example/SKILL.md', '---\nname: example\ndescription: 测试明确职责\n---\n# 示例\n')
         self.assertEqual(MODULE.check(self.root), [])
+
+    def test_skill_invocation_metadata_booleans(self):
+        path = '.agents/skills/example/SKILL.md'
+        self.write(path, '---\nname: example\ndescription: 示例\ndisable-model-invocation: true\nuser-invocable: false\n---\n')
+        self.assertEqual(MODULE.check(self.root), [])
+        for value in ('"true"', 'yes', 'False', '1', ''):
+            for key in ('disable-model-invocation', 'user-invocable'):
+                self.write(path, f'---\nname: example\ndescription: 示例\n{key}: {value}\n---\n')
+                self.assertTrue(any('布尔值' in error for error in MODULE.check(self.root)))
+
+    def test_duplicate_skill_metadata_rejected(self):
+        for key in ('name', 'description', 'user-invocable'):
+            self.write('.agents/skills/example/SKILL.md', f'---\nname: example\ndescription: 示例\n{key}: true\n{key}: false\n---\n')
+            self.assertTrue(any('重复' in error for error in MODULE.check(self.root)))
 
     def test_mismatched_skill(self):
         self.write('.agents/skills/example/SKILL.md', '---\nname: other\ndescription: 示例\n---\n')

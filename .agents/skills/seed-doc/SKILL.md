@@ -44,9 +44,6 @@ description: 在明确范围内创建、重构、审阅、审计或迁移项目�
 - [可选骨架](templates/document-patterns.md)：按职责选取，不能整批生成空文档。
 - [来源与迁移覆盖](references/upstream-map.md)：本 Skill 的上游基线和适配理由，仅维护模板或审计迁移时读取。
 
-## 条件参考
+## 专项工作
 
-仅在本次任务涉及对应风险时读取；这些不是独立预设 Skill。
-
-- [对外破坏性变更与升级说明](references/upgrade-guide.md)。
-- [明确要求翻译时的事实和同步检查](references/translation.md)。
+对外破坏性变化使用 [升级指南](../seed-create-upgrade-guide/SKILL.md)。普通文档改动按项目已有语言政策最小同步；扩展翻译流程只能由用户按名称调用，不能从本 Skill 自动加载。

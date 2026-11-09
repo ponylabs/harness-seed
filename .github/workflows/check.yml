@@ -8,10 +8,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - run: python3 scripts/check_harness.py
+        env:
+          HARNESS_ARCHIVE_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
       - run: python3 -m unittest discover -s tests -v
       - name: 检查当前版本全部跟踪文件的空白错误
         run: git diff --check "$(git hash-object -t tree /dev/null)" HEAD

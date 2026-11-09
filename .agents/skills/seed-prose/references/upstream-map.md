@@ -8,7 +8,7 @@ Copyright (c) 2026 DeepSeek。上游为 MIT；完整许可见 [DeepSeek Harness 
 | --- | --- |
 | 先保全命题，再精简；术语审查而非禁词 | 保留于 SKILL“完整含义”，中文自然改写 |
 | 显式范围、automatic / interactive、模式不授写权 | 保留于“输入、范围和权限”；任务上下文能唯一确定范围即视为已有输入 |
-| vendor 排除及符号链接、冻结归档 | 保留排除规则与命令示例；归档位置按项目实际，不强制 .agents/notes/archived |
+| vendor 排除及符号链接、冻结归档 | 保留排除规则与命令示例；Agent Notes 归档按 Notes 契约使用 .agents/notes/archived，其他供应商和生成快照按真实项目补充排除 |
 | 生成目录/快照/样本源头与消费者、摘要独立完整 | 保留于输入、coverage 和示例 16 |
 | 双语无永久语言拥有者 | 条件化：沿用项目实际语言政策，不新增配对工具 |
 | 执行者、条件、时序、情态、否定、例外、所有权、失败后果 | 全部保留于完整含义 |
@@ -21,3 +21,5 @@ Copyright (c) 2026 DeepSeek。上游为 MIT；完整许可见 [DeepSeek Harness 
 | 示例 1–17 | 全部以相同原则顺序改写于 examples；替换专属机制名，不删反例、失败分支或判断理由 |
 
 示例是判断校准材料，不是要求新项目实现示例中的线程、插件、审批或缓存系统。这里只声明条目迁移覆盖，不宣称文字规则能机械证明 Agent 永不偏离。
+
+过程残留清理对应上游独立的 dsh-trim-cot-leakage，现恢复为独立 [seed-trim-cot-leakage](../../seed-trim-cot-leakage/SKILL.md)，不再藏在表达 Skill 参考中。

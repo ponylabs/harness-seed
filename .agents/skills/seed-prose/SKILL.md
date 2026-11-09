@@ -44,8 +44,6 @@ description: 在明确范围内编写、审阅、补全、恢复或精炼项目�
 
 来源与改编范围见[上游映射](references/upstream-map.md)。
 
-## 条件参考
+## 专项工作
 
-仅在本次任务涉及对应风险时读取；这些不是独立预设 Skill。
-
-- [清理过程性残留，保留因果和有效历史](references/session-residue.md)。
+明确清理会话或评审过程残留时，使用独立的 [过程残留清理](../seed-trim-cot-leakage/SKILL.md)，不把有效理由、例外和历史当作冗余删除。
