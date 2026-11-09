@@ -10,20 +10,56 @@ SPEC = importlib.util.spec_from_file_location('check_harness', Path(__file__).re
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
+# 只列模板随附的入口，不从派生项目的整个 skills 目录推断模板所有权。
+# 新增、移除或更名模板自带 Skill 时，同步此清单及根路由。
+BUNDLED_SKILLS = (
+    'seek-agent-experience',
+    'seek-code-review',
+    'seek-create-upgrade-guide',
+    'seek-doc',
+    'seek-error-handling',
+    'seek-find-simplifications',
+    'seek-initialize',
+    'seek-merging-stacked-prs',
+    'seek-notes',
+    'seek-pr-description',
+    'seek-prose',
+    'seek-record-browser-gif',
+    'seek-responsive-ui',
+    'seek-speed-up-perf',
+    'seek-test-reliability',
+    'seek-translate-docs',
+    'seek-trim-cot-leakage',
+    'seek-ui',
+    'seek-verify',
+)
+
+
+def bundled_skill_errors(root):
+    """模板入口完整性；其他 Skill 的通用格式仍由实际检查器验证。"""
+    errors = []
+    routing = (root / 'AGENTS.md').read_text(encoding='utf-8')
+    for name in BUNDLED_SKILLS:
+        skill = root / '.agents/skills' / name / 'SKILL.md'
+        if not name.startswith('seek-'):
+            errors.append(f'{name}: 模板自带名称必须以 seek- 开头')
+        if not skill.is_file():
+            errors.append(f'{name}: 缺少模板自带入口')
+            continue
+        parts = skill.read_text(encoding='utf-8').split('---', 2)
+        if len(parts) < 3 or f'name: {name}' not in parts[1].splitlines():
+            errors.append(f'{name}: name 与模板自带名称不一致')
+        if name not in routing:
+            errors.append(f'{name}: 缺少根路由')
+    return errors
+
+
 class BundledSkillNames(unittest.TestCase):
     """检查模板自带入口；不限制派生项目自建 Skill 的命名。"""
 
     def test_bundled_names_and_routes(self):
         root = Path(__file__).resolve().parents[1]
-        skills = list((root / '.agents/skills').glob('*/SKILL.md'))
-        self.assertTrue(skills)
-        routing = (root / 'AGENTS.md').read_text(encoding='utf-8')
-        for skill in skills:
-            with self.subTest(skill=skill.parent.name):
-                self.assertTrue(skill.parent.name.startswith('seek-'))
-                metadata = skill.read_text(encoding='utf-8').split('---', 2)[1]
-                self.assertIn(f'name: {skill.parent.name}', metadata.splitlines())
-                self.assertIn(skill.parent.name, routing)
+        self.assertEqual(bundled_skill_errors(root), [])
 
     def test_translation_remains_manual(self):
         root = Path(__file__).resolve().parents[1]
@@ -31,6 +67,44 @@ class BundledSkillNames(unittest.TestCase):
         metadata = skill.read_text(encoding='utf-8').split('---', 2)[1]
         self.assertIn('disable-model-invocation: true', metadata.splitlines())
         self.assertIn('user-invocable: true', metadata.splitlines())
+
+
+class BundledSkillScope(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        (self.root / 'AGENTS.md').write_text('\n'.join(BUNDLED_SKILLS), encoding='utf-8')
+        for name in BUNDLED_SKILLS:
+            skill = self.root / '.agents/skills' / name / 'SKILL.md'
+            skill.parent.mkdir(parents=True)
+            skill.write_text(f'---\nname: {name}\ndescription: 模板入口。\n---\n', encoding='utf-8')
+
+    def test_custom_skills_do_not_expand_bundled_scope(self):
+        for name in ('import-quotes', 'seek-business-import'):
+            skill = self.root / '.agents/skills' / name / 'SKILL.md'
+            skill.parent.mkdir(exist_ok=True)
+            skill.write_text(f'---\nname: {name}\ndescription: 导入业务数据。\n---\n', encoding='utf-8')
+        self.assertEqual(bundled_skill_errors(self.root), [])
+
+    def test_renamed_bundled_skill_is_not_silently_excluded(self):
+        skills = self.root / '.agents/skills'
+        (skills / 'seek-doc').rename(skills / 'project-doc')
+        self.assertTrue(any('seek-doc' in error for error in bundled_skill_errors(self.root)))
+
+    def test_missing_bundled_skill_is_rejected(self):
+        (self.root / '.agents/skills/seek-doc/SKILL.md').unlink()
+        self.assertTrue(any('seek-doc' in error for error in bundled_skill_errors(self.root)))
+
+    def test_wrong_bundled_metadata_is_rejected(self):
+        skill = self.root / '.agents/skills/seek-doc/SKILL.md'
+        skill.write_text(skill.read_text(encoding='utf-8').replace('name: seek-doc', 'name: project-doc'), encoding='utf-8')
+        self.assertTrue(any('seek-doc' in error for error in bundled_skill_errors(self.root)))
+
+    def test_missing_bundled_route_is_rejected(self):
+        routing = self.root / 'AGENTS.md'
+        routing.write_text('\n'.join(line for line in routing.read_text(encoding='utf-8').splitlines() if 'seek-doc' not in line) + '\n', encoding='utf-8')
+        self.assertTrue(any('seek-doc' in error for error in bundled_skill_errors(self.root)))
 
 
 class HarnessChecks(unittest.TestCase):
